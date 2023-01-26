@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"sort"
@@ -15,21 +14,8 @@ import (
 	"golang.org/x/term"
 )
 
-func main() {
-
-	var existDB bool
-
-	if len(os.Args) < 2 {
-		help.DisplayUsage()
-		os.Exit(0)
-	}
-
-	existDB = database.ExistDB()
-	if existDB {
-		fmt.Print("enter current master password: ")
-	} else {
-		fmt.Println("please, specify a master password for your new database: ")
-	}
+func inizializeDatabase() {
+	fmt.Print("please, specify a master password for your new database:")
 
 	var err error
 	var mPasswordSlice = make([]byte, 32, 32)
@@ -39,56 +25,47 @@ func main() {
 	}
 	database.MasterPassword = string(mPasswordSlice)
 
-	if !existDB {
-		fmt.Println("This is your password, please take a note and don't forget it, or you cannot be able to access your data\n", database.MasterPassword)
+	database.CreateNewDatabase()
+
+	fmt.Println("This is your password, please take a note and don't forget it, or you cannot be able to access your data\n", database.MasterPassword)
+}
+
+func readPassword() {
+	fmt.Print("enter master password:")
+	var err error
+	var mPasswordSlice = make([]byte, 32)
+	mPasswordSlice, err = term.ReadPassword(syscall.Stdin)
+	if err != nil {
+		os.Exit(0)
 	}
+	database.MasterPassword = string(mPasswordSlice)
+}
+
+func main() {
+
+	var existDB bool
+	if len(os.Args) < 2 {
+		help.DisplayUsage()
+		os.Exit(0)
+	}
+
+	existDB = database.ExistDB()
+	if existDB {
+		if os.Args[1] != "generate" {
+			readPassword()
+		}
+	} else {
+		inizializeDatabase()
+	}
+
 	fmt.Println()
-	queryCmd := flag.NewFlagSet("query", flag.ExitOnError)
-	queryFieldArg := queryCmd.String("l", "label", "specify label to search in")
 
-	storeCmd := flag.NewFlagSet("store", flag.ExitOnError)
-	deleteCmd := flag.NewFlagSet("delete", flag.ExitOnError)
-
-	deleteArgId := deleteCmd.Int("id", 0, "specify a record identifier")
-	var sc models.StoreCommand
-	sc.Label = storeCmd.String("l", "", "Label for new password")
-	sc.Account = storeCmd.String("a", "", "Account for this password")
-	sc.Password = storeCmd.String("p", "", "The password")
-
-	switch os.Args[1] {
-	case "all":
-		displayResult(database.Search("*"))
-	case "query":
-		queryCmd.Parse(os.Args[2:])
-		fmt.Println("serching for label : ", *queryFieldArg)
-		displayResult(database.Search(*queryFieldArg))
-	case "reset":
-		fmt.Print("Enter New Master Password: ")
-		var newPasswordSlice = make([]byte, 32, 32)
-		newPasswordSlice, err = term.ReadPassword(syscall.Stdin)
-		if err != nil {
-			os.Exit(0)
-		}
-		fmt.Println()
-		database.ChangeMasterPassword(string(newPasswordSlice))
-		fmt.Println("master password sucessfully changed")
-	case "store":
-		v := os.Args[2:]
-		storeCmd.Parse(v)
-		if storeCmd.NFlag() < 3 {
-			fmt.Println("devi specificare 3 parametri")
-			os.Exit(1)
-		}
-		fmt.Println("memorize new password for : ", *sc.Label, *sc.Account, *sc.Password)
-		database.Memorize(*sc.Label, *sc.Account, *sc.Password)
-	case "delete":
-		v := os.Args[2:]
-		deleteCmd.Parse(v)
-		database.Delete(deleteArgId)
-	case "version":
-		fmt.Println("rp - simple password manager, v1.0.1 (C) Carlo Di Giuseppe, 16-01-2023")
+	if v, ok := Tasks[os.Args[1]]; ok {
+		v.(func([]string))(os.Args)
+	} else {
+		fmt.Println("Unknow command : ", os.Args[1])
+		help.DisplayUsage()
 	}
-
 }
 
 func displayResult(result []models.Entry) {

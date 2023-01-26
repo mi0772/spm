@@ -8,6 +8,11 @@ type StoreCommand struct {
 	Password *string
 }
 
+type GenerateCommand struct {
+	Length  *string
+	Special *string
+}
+
 type Entry struct {
 	Id         int       `json:"id"`
 	Label      string    `json:"label"`

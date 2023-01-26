@@ -39,11 +39,14 @@ func fetchAllRecords() ([]models.Entry, int) {
 	var result models.Entries
 	databaseFileName, err := os.Open(userHomeDir + "/" + DB_NAME)
 	if err != nil {
-		databaseFileName = createNewDatabase()
+		databaseFileName = CreateNewDatabase()
 	}
 	defer databaseFileName.Close()
 
 	byteValue, err := io.ReadAll(databaseFileName)
+	if err != nil && err != io.EOF {
+		panic(err)
+	}
 
 	if len(byteValue) > 0 {
 		//decrypt content with master password
@@ -61,11 +64,13 @@ func fetchAllRecords() ([]models.Entry, int) {
 	}), size
 }
 
-func createNewDatabase() *os.File {
+func CreateNewDatabase() *os.File {
 	newFile, err := os.Create(userHomeDir + "/" + DB_NAME)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	Memorize("spm", "master password", MasterPassword)
 	return newFile
 }
 
