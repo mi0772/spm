@@ -48,7 +48,7 @@ func main() {
 
 	existDB = database.ExistDB()
 	if existDB {
-		if os.Args[1] != "generate" {
+		if !unprotectCommand(os.Args[1]) {
 			readPassword()
 		}
 	} else {
@@ -89,5 +89,16 @@ func displayResult(result []models.Entry) {
 	tbl.Print()
 	if len(result) == 0 {
 		fmt.Println("no records found")
+	}
+}
+
+func unprotectCommand(command string) bool {
+	switch command {
+	case "version":
+		fallthrough
+	case "generate":
+		return true
+	default:
+		return false
 	}
 }

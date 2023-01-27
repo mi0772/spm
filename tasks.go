@@ -81,8 +81,8 @@ func delete(args []string) {
 	database.Delete(&id)
 }
 
-func version() {
-	fmt.Println("rp - simple password manager, v1.0.1 (C) Carlo Di Giuseppe, 16-01-2023")
+func version(args []string) {
+	fmt.Println("rp - simple password manager, v1.0.2 (C) Carlo Di Giuseppe, 16-01-2023")
 }
 
 func generateTask(args []string) {
