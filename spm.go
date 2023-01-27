@@ -16,7 +16,6 @@ import (
 
 func inizializeDatabase() {
 	fmt.Print("please, specify a master password for your new database:")
-
 	var err error
 	var mPasswordSlice = make([]byte, 32, 32)
 	mPasswordSlice, err = term.ReadPassword(syscall.Stdin)
@@ -24,9 +23,7 @@ func inizializeDatabase() {
 		os.Exit(0)
 	}
 	database.MasterPassword = string(mPasswordSlice)
-
 	database.CreateNewDatabase()
-
 	fmt.Println("This is your password, please take a note and don't forget it, or you cannot be able to access your data\n", database.MasterPassword)
 }
 

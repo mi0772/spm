@@ -6,7 +6,7 @@ import (
 	"os"
 	"spm/database"
 	"spm/help"
-	"strconv"
+	"spm/models"
 	"syscall"
 
 	"github.com/sethvargo/go-password/password"
@@ -16,69 +16,90 @@ import (
 var Tasks map[string]interface{} = make(map[string]interface{})
 
 func init() {
-	Tasks["all"] = func(args []string) {
-		displayResult(database.Search("*"))
-	}
-	Tasks["query"] = func(args []string) {
-		queryCmd.Parse(os.Args[2:])
-		fmt.Println("serching for label : ", *queryFieldArg)
-		displayResult(database.Search(*queryFieldArg))
-	}
-	Tasks["reset"] = func(args []string) {
-		fmt.Print("Enter New Master Password: ")
-		var newPasswordSlice = make([]byte, 32)
-		newPasswordSlice, err := term.ReadPassword(syscall.Stdin)
-		if err != nil {
-			os.Exit(0)
-		}
-		fmt.Println()
-		database.ChangeMasterPassword(string(newPasswordSlice))
-		fmt.Println("master password sucessfully changed")
-	}
-	Tasks["store"] = func(args []string) {
-		v := os.Args[2:]
-		sc.Label = storeCmd.String("l", "", "Label for new password")
-		sc.Account = storeCmd.String("a", "", "Account for this password")
-		sc.Password = storeCmd.String("p", "", "The password")
+	Tasks["all"] = all
+	Tasks["query"] = query
+	Tasks["reset"] = reset
+	Tasks["store"] = memorize
+	Tasks["delete"] = delete
+	Tasks["version"] = version
+	Tasks["generate"] = generateTask
+}
 
-		storeCmd.Parse(v)
-		if storeCmd.NFlag() < 3 {
-			help.DisplayUsage()
-			os.Exit(1)
-		}
+func all(args []string) {
+	displayResult(database.Search("*"))
+}
 
-		fmt.Println("memorize new password for : ", *sc.Label, *sc.Account, *sc.Password)
-		database.Memorize(*sc.Label, *sc.Account, *sc.Password)
+func query(args []string) {
+	var p string
+	var ok bool
+	if p, ok = GetParameterAsString(args, 2); !ok {
+		help.DisplayUsage()
+	}
+	fmt.Println("serching for label : ", p)
+	displayResult(database.Search(p))
+}
+
+func reset(args []string) {
+	fmt.Print("Enter New Master Password: ")
+	var newPasswordSlice = make([]byte, 32)
+	newPasswordSlice, err := term.ReadPassword(syscall.Stdin)
+	if err != nil {
+		os.Exit(0)
+	}
+	fmt.Println()
+	database.ChangeMasterPassword(string(newPasswordSlice))
+	fmt.Println("master password sucessfully changed")
+}
+
+func memorize(args []string) {
+
+	var label, account, password string
+	var ok bool
+
+	if label, ok = GetParameterAsString(args, 2); !ok {
+		help.DisplayUsage()
+	}
+	if account, ok = GetParameterAsString(args, 3); !ok {
+		help.DisplayUsage()
+	}
+	if password, ok = GetParameterAsString(args, 4); !ok {
+		help.DisplayUsage()
+	}
+	var sc = &models.StoreCommand{Label: &label, Account: &account, Password: &password}
+
+	fmt.Printf("memorize new password for label:%s, account:%s, password:%s\n", *sc.Label, *sc.Account, *sc.Password)
+	database.Memorize(*sc.Label, *sc.Account, *sc.Password)
+}
+
+func delete(args []string) {
+	var id int
+	var ok bool
+	if id, ok = GetParameterAsInt(args, 2); !ok {
+		help.DisplayUsage()
 	}
 
-	Tasks["delete"] = func(args []string) {
-		v := os.Args[2:]
-		deleteCmd.Parse(v)
-		database.Delete(deleteArgId)
+	database.Delete(&id)
+}
+
+func version() {
+	fmt.Println("rp - simple password manager, v1.0.1 (C) Carlo Di Giuseppe, 16-01-2023")
+}
+
+func generateTask(args []string) {
+	var length, numspecial int
+	var ok bool
+	if length, ok = GetParameterAsInt(args, 2); !ok {
+		help.DisplayUsage()
 	}
-
-	Tasks["version"] = func(args []string) {
-		fmt.Println("rp - simple password manager, v1.0.1 (C) Carlo Di Giuseppe, 16-01-2023")
+	if numspecial, ok = GetParameterAsInt(args, 3); !ok {
+		help.DisplayUsage()
 	}
+	var gc = &models.GenerateCommand{Length: length, Special: numspecial}
 
-	Tasks["generate"] = func(args []string) {
-
-		v := os.Args[2:]
-		gc.Length = generateCmd.String("l", "10", "Length of password")
-		gc.Special = generateCmd.String("s", "1", "Number of special chars")
-		generateCmd.Parse(v)
-		if generateCmd.NFlag() < 2 {
-			help.DisplayUsage()
-			os.Exit(1)
-		}
-		v1, _ := strconv.Atoi(*gc.Length)
-		v2, _ := strconv.Atoi(*gc.Special)
-
-		fmt.Printf("generate %v password length with %v special chars\n", *gc.Length, *gc.Special)
-		res, err := password.Generate(v1, 5, v2, false, false)
-		if err != nil {
-			log.Fatal(err)
-		}
-		fmt.Println("This is your password:", res)
+	fmt.Printf("generate %v password length with %v special chars\n", gc.Length, gc.Special)
+	res, err := password.Generate(gc.Length, gc.Length/4, gc.Special, false, false)
+	if err != nil {
+		log.Fatal(err)
 	}
+	fmt.Println("This is your password:", res)
 }

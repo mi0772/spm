@@ -9,8 +9,8 @@ type StoreCommand struct {
 }
 
 type GenerateCommand struct {
-	Length  *string
-	Special *string
+	Length  int
+	Special int
 }
 
 type Entry struct {
